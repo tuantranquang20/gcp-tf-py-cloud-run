@@ -3,6 +3,7 @@ data "archive_file" "function_zip" {
   source_dir  = "${path.module}/source"
   output_path = "/tmp/${var.prefix}-cloud-function.zip"
 }
+
 # ── Eventarc Service Agent ───────────────────────────────────
 # Google tự tạo SA này khi bật Eventarc API
 # Cần cấp quyền thủ công vì đôi khi không tự propagate
@@ -89,6 +90,14 @@ resource "google_project_iam_member" "function_build_editor" {
   member  = "serviceAccount:${google_service_account.function_sa.email}"
 }
 
+# 2. Cấp quyền actAs (Service Account User) cho Function SA lên Compute Engine SA
+resource "google_service_account_iam_member" "function_act_as_compute_sa" {
+  # Đây là SA mà Cloud Build đang sử dụng để chạy tiến trình
+  service_account_id = "projects/${var.project_id}/serviceAccounts/${var.project_number}-compute@developer.gserviceaccount.com"
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.function_sa.email}"
+}
+
 resource "google_cloudfunctions2_function" "deploy_trigger" {
   name        = "${var.prefix}-deploy-trigger"
   location    = var.region
@@ -142,6 +151,7 @@ resource "google_cloudfunctions2_function" "deploy_trigger" {
     # Chú ý: Cần đảm bảo function_sa có quyền Storage Object Viewer và Cloud Build Editor
     google_project_iam_member.function_gcs_viewer,     # Quyền đọc file zip từ bucket
     google_project_iam_member.function_build_editor,   # Quyền gọi API create_build
+    google_service_account_iam_member.function_act_as_compute_sa, # Thêm dòng này
     google_project_iam_member.function_eventarc_receiver,
   ]
 }

@@ -65,6 +65,7 @@ module "cloud_build" {
 module "cloud_function" {
   source                 = "./modules/cloud_function"
   project_id             = var.project_id
+  project_number         = var.project_number
   region                 = var.region
   prefix                 = var.prefix
   bucket_name            = module.storage.artifact_bucket_name

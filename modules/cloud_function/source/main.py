@@ -6,10 +6,23 @@ import zipfile
 from google.cloud import storage
 from google.cloud.devtools import cloudbuild_v1
 
-PROJECT_ID = os.environ.get("PROJECT_ID")
-# Khuyến nghị dùng regional build nếu bạn triển khai ở asia-southeast1
-REGION = os.environ.get("REGION", "global") 
-REPO_NAME = os.environ.get("REPO_NAME", "myapp-repo") 
+project_id = os.environ.get("PROJECT_ID")
+region = os.environ.get("REGION", "asia-southeast1")
+service_name = os.environ.get("SERVICE_NAME", "my-app")
+repo_name = os.environ.get("REPO_NAME", "myapp-repo")
+
+def camel_to_snake(obj):
+    if isinstance(obj, list):
+        return [camel_to_snake(i) for i in obj]
+    elif isinstance(obj, dict):
+        new_dict = {}
+        for k, v in obj.items():
+            # Chuyển đổi key (VD: 'waitFor' -> 'wait_for', 'machineType' -> 'machine_type')
+            new_key = re.sub(r'(?<!^)(?=[A-Z])', '_', k).lower()
+            new_dict[new_key] = camel_to_snake(v)
+        return new_dict
+    else:
+        return obj
 
 @functions_framework.cloud_event
 def trigger_build(cloud_event):
@@ -38,12 +51,13 @@ def trigger_build(cloud_event):
         blob = gcs_bucket.blob(file_name)
         blob.download_to_filename(local_zip_path)
 
-        # 2. Đọc và parse file codebuild.yaml từ bên trong file zip
+        # 2. Đọc và parse file cloudbuild.yaml từ bên trong file zip
         with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
-            # Ghi chú: Đảm bảo file yaml nằm ở thư mục gốc trong file zip
-            yaml_content = zip_ref.read('codebuild.yaml')
-            build_config = yaml.safe_load(yaml_content)
-
+            yaml_content = zip_ref.read('cloudbuild.yaml')  # Hoặc codebuild.yaml tùy tên bạn đặt
+            raw_build_config = yaml.safe_load(yaml_content)
+        
+        build_config = camel_to_snake(raw_build_config)
+        
         # 3. Gắn source trỏ đến file zip vừa được push lên GCS
         build_config['source'] = {
             'storage_source': {
@@ -54,9 +68,11 @@ def trigger_build(cloud_event):
 
         # 4. Gắn các biến substitutions như thiết kế cũ của bạn
         build_config['substitutions'] = {
-            "_VERSION":  version,
-            "_BUCKET":   bucket,
-            "_REPO_NAME": REPO_NAME
+            "_VERSION":   version,
+            "_BUCKET":    bucket,
+            "_REGION":    region,
+            "_SERVICE":   service_name,
+            "_REPO_NAME": repo_name
         }
 
         # 5. Khởi tạo Cloud Build Job bằng Python SDK
@@ -64,12 +80,12 @@ def trigger_build(cloud_event):
         
         # Nếu dùng location cụ thể (ví dụ asia-southeast1), sử dụng tham số parent
         # Nếu dùng global, parent = f"projects/{PROJECT_ID}/locations/global"
-        parent = f"projects/{PROJECT_ID}/locations/{REGION}"
+        parent = f"projects/{project_id}/locations/{region}"
 
         print("[INFO] Submitting build to Cloud Build...")
         operation = build_client.create_build(
             parent=parent,
-            project_id=PROJECT_ID,
+            project_id=project_id,
             build=build_config
         )
 

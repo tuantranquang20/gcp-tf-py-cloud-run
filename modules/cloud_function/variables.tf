@@ -1,4 +1,5 @@
 variable "project_id"      { type = string }
+variable "project_number"      { type = string }
 variable "region"          { type = string }
 variable "prefix"          { type = string }
 variable "bucket_name"     { type = string }
