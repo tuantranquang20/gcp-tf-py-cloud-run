@@ -75,6 +75,20 @@ resource "google_service_account_iam_member" "function_impersonate_cloudbuild" {
   member             = "serviceAccount:${google_service_account.function_sa.email}"
 }
 
+# Quyền đọc file zip từ bucket (GCS Viewer)
+resource "google_project_iam_member" "function_gcs_viewer" {
+  project = var.project_id
+  role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${google_service_account.function_sa.email}"
+}
+
+# Quyền tạo và quản lý tiến trình build (Cloud Build Editor)
+resource "google_project_iam_member" "function_build_editor" {
+  project = var.project_id
+  role    = "roles/cloudbuild.builds.editor"
+  member  = "serviceAccount:${google_service_account.function_sa.email}"
+}
+
 resource "google_cloudfunctions2_function" "deploy_trigger" {
   name        = "${var.prefix}-deploy-trigger"
   location    = var.region
@@ -123,6 +137,8 @@ resource "google_cloudfunctions2_function" "deploy_trigger" {
     google_project_iam_member.eventarc_service_agent,
     google_project_iam_member.eventarc_act_as_function_sa,
     google_project_iam_member.gcs_pubsub_publisher,
+      google_project_iam_member.function_ar_reader,
+    google_project_iam_member.function_run_invoker,
     # Chú ý: Cần đảm bảo function_sa có quyền Storage Object Viewer và Cloud Build Editor
     google_project_iam_member.function_gcs_viewer,     # Quyền đọc file zip từ bucket
     google_project_iam_member.function_build_editor,   # Quyền gọi API create_build
