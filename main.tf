@@ -73,7 +73,6 @@ module "cloud_function" {
   cloudbuild_sa          = module.cloud_build.sa_email
   repo_name              = module.artifact_registry.repo_name
   cloud_run_service_name = var.cloud_run_service_name
-  trigger_id             = var.trigger_id
   cloudbuild_region      = var.region
   depends_on             = [module.cloud_build]
 }

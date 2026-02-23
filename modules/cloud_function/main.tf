@@ -95,17 +95,16 @@ resource "google_cloudfunctions2_function" "deploy_trigger" {
     service_account_email          = google_service_account.function_sa.email
     min_instance_count             = 0
     max_instance_count             = 3
-    timeout_seconds                = 120
-    available_memory               = "256Mi"
+    timeout_seconds                = 240 
+    available_memory               = "512Mi" 
     all_traffic_on_latest_revision = true
 
     environment_variables = {
-      PROJECT_ID    = var.project_id
-      REGION        = var.region
+      PROJECT_ID   = var.project_id
+      REGION       = var.region
       REPO_NAME     = var.repo_name
       SERVICE_NAME  = var.cloud_run_service_name
       CLOUDBUILD_SA = var.cloudbuild_sa
-      CLOUD_BUILD_TRIGGER_ID = var.trigger_id
     }
   }
 
@@ -120,13 +119,13 @@ resource "google_cloudfunctions2_function" "deploy_trigger" {
     }
   }
 
-  # FIX #2: Cloud Function phải đợi TẤT CẢ IAM sẵn sàng
   depends_on = [
     google_project_iam_member.eventarc_service_agent,
     google_project_iam_member.eventarc_act_as_function_sa,
     google_project_iam_member.gcs_pubsub_publisher,
-    google_project_iam_member.function_ar_reader,
-    google_project_iam_member.function_run_invoker,
+    # Chú ý: Cần đảm bảo function_sa có quyền Storage Object Viewer và Cloud Build Editor
+    google_project_iam_member.function_gcs_viewer,     # Quyền đọc file zip từ bucket
+    google_project_iam_member.function_build_editor,   # Quyền gọi API create_build
     google_project_iam_member.function_eventarc_receiver,
   ]
 }

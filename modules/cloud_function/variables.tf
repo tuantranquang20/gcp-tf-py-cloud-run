@@ -8,7 +8,4 @@ variable "cloudbuild_sa"   { type = string }
 variable "repo_name"              { type = string }
 variable "cloud_run_service_name" { type = string }
 variable "cloudbuild_region"      { type = string }
-variable "trigger_id" {
-  type        = string
-  description = "Cloud Build Trigger ID — tạo bằng gcloud"
-}
+

@@ -26,7 +26,4 @@ variable "cloud_run_service_name" {
   description = "Tên Cloud Run service"
 }
 
-variable "trigger_id" {
-  type        = string
-}
 
